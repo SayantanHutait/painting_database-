@@ -160,6 +160,57 @@ where x.rnk = 1
 
 --Which museum has the most no of most popular painting style?
 
+with pop_style as(
+	select style, rank() over(order by count(1) DESC) as rnk
+	from work
+	group by style
+)
+
+SELECT m.name AS museum_name, w.style, COUNT(*) AS no_of_paintings
+FROM work w
+JOIN museum m ON m.museum_id = w.museum_id
+JOIN pop_style ps ON ps.style = w.style
+GROUP BY m.name, w.style
+ORDER BY no_of_paintings DESC
+LIMIT 1
+
+--Identify the artists whose paintings are displayed in multiple countries
+
+WITH cte AS (
+    SELECT DISTINCT a.full_name AS artist, m.country
+    FROM work w
+    JOIN artist a ON a.artist_id = w.artist_id
+    JOIN museum m ON m.museum_id = w.museum_id
+)
+SELECT artist, COUNT(DISTINCT country) AS no_of_countries
+FROM cte
+GROUP BY artist
+HAVING COUNT(DISTINCT country) > 1
+ORDER BY no_of_countries DESC;
+
+--Display the country and the city with most no of museums. Output 2 seperate columns to mention the city and country. If there are multiple value, seperate them with comma.
+
+WITH cte_country AS (
+    SELECT country, COUNT(1) AS country_count,
+           RANK() OVER (ORDER BY COUNT(1) DESC) AS country_rank
+    FROM museum
+    GROUP BY country
+),
+cte_city AS (
+    SELECT city, COUNT(1) AS city_count,
+           RANK() OVER (ORDER BY COUNT(1) DESC) AS city_rank
+    FROM museum
+    GROUP BY city
+)
+SELECT
+    STRING_AGG(DISTINCT country.country, ', ') AS top_countries,
+    STRING_AGG(DISTINCT city.city, ', ') AS top_cities
+FROM cte_country country
+CROSS JOIN cte_city city
+WHERE country.country_rank = 1
+  AND city.city_rank = 1;
+
+
 
 
 
